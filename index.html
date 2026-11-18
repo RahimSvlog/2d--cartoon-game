@@ -4,606 +4,564 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anime Boy - Coin Runner</title>
+<title>Anime Boy Coin Adventure</title>
 
 <style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+ background:#10182c;color:white;
+ font-family:Arial,sans-serif;text-align:center;
 }
-
-body {
-  background: #101b2b;
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
-  overflow-x: hidden;
+h1{color:#ffe36b;padding:17px 3px;font-size:23px}
+.game{max-width:950px;margin:auto;padding:8px}
+.info{
+ display:flex;justify-content:space-around;
+ padding:12px 0;font-weight:bold;font-size:15px;
 }
-
-h1 {
-  padding: 15px 5px;
-  color: #ffe45c;
-  font-size: 25px;
-  text-shadow: 2px 3px #583b19;
+canvas{
+ width:100%;display:block;
+ border:4px solid #ffdf59;border-radius:14px;
+ background:#87ceeb;touch-action:none;
 }
-
-.game-box {
-  width: 100%;
-  max-width: 950px;
-  margin: auto;
-  padding: 8px;
+.controls{
+ display:flex;justify-content:center;
+ gap:15px;padding:18px 5px;
 }
-
-canvas {
-  display: block;
-  width: 100%;
-  border: 4px solid #f7d45c;
-  border-radius: 13px;
-  background: #87ceeb;
-  touch-action: none;
+button{
+ border:0;border-radius:15px;
+ background:#ffdc4d;color:#17223b;
+ padding:17px 27px;font-size:19px;
+ font-weight:bold;box-shadow:0 5px #ad781b;
+ touch-action:none;
 }
-
-.info {
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 4px;
-  font-size: 17px;
-  font-weight: bold;
-}
-
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 15px;
-}
-
-button {
-  border: none;
-  border-radius: 16px;
-  padding: 16px 30px;
-  font-size: 20px;
-  font-weight: bold;
-  color: #172238;
-  background: #ffdb4d;
-  box-shadow: 0 5px #c18a21;
-  cursor: pointer;
-  touch-action: none;
-}
-
-button:active {
-  transform: translateY(4px);
-  box-shadow: 0 1px #c18a21;
-}
-
-#restart {
-  background: #50e68c;
-  margin: 8px;
-}
-
-.tip {
-  color: #c8d7ef;
-  padding: 10px;
-  font-size: 13px;
-}
+button:active{transform:translateY(4px)}
+#restart{background:#54e995}
+.tip{color:#cbd7ed;font-size:13px;padding:10px}
 </style>
 </head>
 
 <body>
 
-<h1>⚔️ ANIME BOY: COIN RUNNER</h1>
+<h1>⚔️ ANIME BOY: COIN ADVENTURE</h1>
 
-<div class="game-box">
+<div class="game">
 
-  <div class="info">
-    <span>🪙 Coins: <span id="coins">0</span></span>
-    <span>❤️ Life: <span id="life">3</span></span>
-    <span>🏆 Score: <span id="score">0</span></span>
-  </div>
+<div class="info">
+ <span>🪙 <b id="coins">0</b></span>
+ <span>❤️ <b id="life">3</b></span>
+ <span>🏆 <b id="score">0</b></span>
+</div>
 
-  <canvas id="game" width="900" height="450"></canvas>
+<canvas id="game" width="900" height="450"></canvas>
 
-  <div class="controls">
-    <button id="jumpBtn">⬆ JUMP</button>
-    <button id="pauseBtn">⏸ PAUSE</button>
-  </div>
+<div class="controls">
+ <button id="jump">⬆ JUMP</button>
+ <button id="pause">⏸ PAUSE</button>
+</div>
 
-  <button id="restart" hidden>🔄 PLAY AGAIN</button>
-
-  <p class="tip">
-    Tap JUMP to collect coins and avoid obstacles!
-  </p>
+<button id="restart" hidden>🔄 RESTART</button>
+<p class="tip">Jump over monsters and collect golden coins!</p>
 
 </div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-const W = 900;
-const H = 450;
-const ground = 365;
+const W=900,H=450,G=365;
+const $=id=>document.getElementById(id);
 
-let player, coins, obstacles;
-let score, coinCount, life;
-let speed, distance, frame;
-let gameOver, paused, invincible;
-let lastTime = 0;
+let hero,coins,enemies;
+let score,coinCount,life,speed;
+let frame,distance,gameOver,paused,shield,lastTime=0;
 
-const $ = id => document.getElementById(id);
-
-function resetGame() {
-  player = {
-    x: 145,
-    y: ground - 92,
-    w: 54,
-    h: 92,
-    vy: 0,
-    onGround: true
-  };
-
-  coins = [];
-  obstacles = [];
-
-  score = 0;
-  coinCount = 0;
-  life = 3;
-  speed = 5;
-  distance = 0;
-  frame = 0;
-
-  gameOver = false;
-  paused = false;
-  invincible = 0;
-
-  $("restart").hidden = true;
-  $("pauseBtn").textContent = "⏸ PAUSE";
-  updateInfo();
+function reset(){
+ hero={x:145,y:G-95,w:58,h:95,vy:0,ground:true};
+ coins=[];
+ enemies=[];
+ score=0;coinCount=0;life=3;
+ speed=5;frame=0;distance=0;
+ gameOver=false;paused=false;shield=0;
+ $("restart").hidden=true;
+ $("pause").textContent="⏸ PAUSE";
+ updateInfo();
 }
 
-function updateInfo() {
-  $("coins").textContent = coinCount;
-  $("life").textContent = life;
-  $("score").textContent = score;
+function updateInfo(){
+ $("coins").textContent=coinCount;
+ $("life").textContent=life;
+ $("score").textContent=score;
 }
 
-// Background
-function drawBackground() {
-  let sky = ctx.createLinearGradient(0,0,0,H);
-  sky.addColorStop(0,"#64c8fa");
-  sky.addColorStop(1,"#e4f9c9");
+// Sky
+function background(){
+ let sky=ctx.createLinearGradient(0,0,0,H);
+ sky.addColorStop(0,"#4ab5f5");
+ sky.addColorStop(.65,"#b9edfa");
+ sky.addColorStop(1,"#e2f5c4");
+ ctx.fillStyle=sky;
+ ctx.fillRect(0,0,W,H);
 
-  ctx.fillStyle = sky;
+ // Sun
+ ctx.fillStyle="#fff28a";
+ ctx.beginPath();ctx.arc(750,78,43,0,7);ctx.fill();
+
+ // Clouds
+ for(let i=0;i<6;i++){
+  let x=((i*210-distance*.2)%1100+1100)%1100-100;
+  let y=65+(i%3)*40;
+  ctx.fillStyle="rgba(255,255,255,.9)";
+  ctx.beginPath();
+  ctx.arc(x,y,25,0,7);
+  ctx.arc(x+28,y-15,32,0,7);
+  ctx.arc(x+60,y,24,0,7);
+  ctx.fill();
+ }
+
+ // Mountains
+ ctx.fillStyle="#79c88b";
+ ctx.beginPath();
+ ctx.moveTo(0,300);
+ for(let x=0;x<=W;x+=75){
+  ctx.lineTo(x,210+Math.sin(x*.015)*65);
+ }
+ ctx.lineTo(W,G);ctx.lineTo(0,G);ctx.fill();
+
+ ctx.fillStyle="#4aab70";
+ ctx.beginPath();
+ ctx.moveTo(0,320);
+ for(let x=0;x<=W;x+=100){
+  ctx.lineTo(x,270+Math.sin(x*.02)*35);
+ }
+ ctx.lineTo(W,G);ctx.lineTo(0,G);ctx.fill();
+
+ // Forest trees
+ for(let i=0;i<10;i++){
+  let x=((i*115-distance*.5)%1100+1100)%1100-100;
+  ctx.fillStyle="#704326";
+  ctx.fillRect(x+25,255,20,110);
+
+  ctx.fillStyle="#176d43";
+  ctx.beginPath();ctx.arc(x+35,245,48,0,7);ctx.fill();
+
+  ctx.fillStyle="#2e9c59";
+  ctx.beginPath();ctx.arc(x+12,225,30,0,7);ctx.fill();
+
+  ctx.fillStyle="#55ba6a";
+  ctx.beginPath();ctx.arc(x+46,213,23,0,7);ctx.fill();
+ }
+
+ // Grass
+ ctx.fillStyle="#43bd4c";
+ ctx.fillRect(0,G,W,17);
+
+ // Ground
+ ctx.fillStyle="#89542e";
+ ctx.fillRect(0,G+17,W,H-G);
+
+ ctx.fillStyle="#c99454";
+ for(let i=0;i<20;i++){
+  let x=((i*85-distance)%1000+1000)%1000;
+  ctx.fillRect(x,G+43,38,5);
+ }
+
+ // Grass details
+ for(let i=0;i<30;i++){
+  let x=((i*53-distance)%1000+1000)%1000;
+  ctx.strokeStyle="#a0ed65";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(x,G+2);
+  ctx.lineTo(x-5,G-5);
+  ctx.stroke();
+ }
+}
+
+// Anime hero
+function drawHero(){
+ ctx.save();
+
+ let running=Math.sin(frame*.3);
+ let bob=hero.ground?Math.abs(running)*2:0;
+
+ ctx.translate(hero.x,hero.y+bob);
+
+ if(shield>0 && Math.floor(frame/5)%2===0){
+  ctx.globalAlpha=.45;
+ }
+
+ // Shadow
+ ctx.fillStyle="rgba(0,0,0,.22)";
+ ctx.beginPath();
+ ctx.ellipse(29,98,32,7,0,0,7);ctx.fill();
+
+ // Hair back
+ ctx.fillStyle="#17213c";
+ ctx.beginPath();
+ ctx.arc(29,21,25,0,7);
+ ctx.fill();
+
+ // Legs
+ ctx.lineCap="round";
+ ctx.lineWidth=13;
+ ctx.strokeStyle="#26365e";
+
+ let leg=hero.ground?running*10:0;
+
+ ctx.beginPath();
+ ctx.moveTo(21,69);
+ ctx.lineTo(16+leg,87);
+ ctx.stroke();
+
+ ctx.beginPath();
+ ctx.moveTo(39,69);
+ ctx.lineTo(43-leg,87);
+ ctx.stroke();
+
+ // Shoes
+ ctx.fillStyle="#19243d";
+ ctx.beginPath();
+ ctx.ellipse(14+leg,90,13,7,0,0,7);
+ ctx.ellipse(44-leg,90,13,7,0,0,7);
+ ctx.fill();
+
+ // Body outline
+ ctx.fillStyle="#17213d";
+ ctx.beginPath();
+ ctx.roundRect(10,39,39,39,10);ctx.fill();
+
+ // Jacket
+ ctx.fillStyle="#344d96";
+ ctx.beginPath();
+ ctx.roundRect(13,41,33,33,7);ctx.fill();
+
+ // Shirt
+ ctx.fillStyle="#f9f6eb";
+ ctx.fillRect(26,42,8,31);
+
+ // Jacket details
+ ctx.strokeStyle="#8aa9ef";
+ ctx.lineWidth=2;
+ ctx.beginPath();
+ ctx.moveTo(15,47);ctx.lineTo(23,70);
+ ctx.moveTo(43,47);ctx.lineTo(36,70);
+ ctx.stroke();
+
+ // Neck
+ ctx.fillStyle="#f5bd96";
+ ctx.fillRect(24,31,14,13);
+
+ // Arms
+ ctx.lineWidth=9;
+ ctx.strokeStyle="#f5bd96";
+ ctx.beginPath();
+ ctx.moveTo(13,47);
+ ctx.lineTo(4,62+leg*.4);
+ ctx.stroke();
+ ctx.beginPath();
+ ctx.moveTo(46,47);
+ ctx.lineTo(54,62-leg*.4);
+ ctx.stroke();
+
+ // Scarf
+ ctx.fillStyle="#e83c50";
+ ctx.beginPath();
+ ctx.moveTo(18,39);ctx.lineTo(40,39);
+ ctx.lineTo(36,48);ctx.lineTo(22,47);
+ ctx.fill();
+
+ ctx.beginPath();
+ ctx.moveTo(34,44);
+ ctx.lineTo(46,57+running*5);
+ ctx.lineTo(38,53);
+ ctx.fill();
+
+ // Face
+ ctx.fillStyle="#ffcfaa";
+ ctx.beginPath();
+ ctx.ellipse(30,24,20,23,0,0,7);
+ ctx.fill();
+
+ // Ear
+ ctx.beginPath();
+ ctx.arc(10,27,5,0,7);
+ ctx.arc(50,27,5,0,7);
+ ctx.fill();
+
+ // Hair spikes
+ ctx.fillStyle="#17213c";
+ ctx.beginPath();
+ ctx.moveTo(10,23);
+ ctx.lineTo(9,5);
+ ctx.lineTo(22,12);
+ ctx.lineTo(24,-8);
+ ctx.lineTo(34,10);
+ ctx.lineTo(47,1);
+ ctx.lineTo(49,23);
+ ctx.lineTo(39,17);
+ ctx.lineTo(31,25);
+ ctx.lineTo(24,16);
+ ctx.lineTo(15,29);
+ ctx.fill();
+
+ // Hair shine
+ ctx.strokeStyle="#53638b";
+ ctx.lineWidth=2;
+ ctx.beginPath();
+ ctx.moveTo(16,8);ctx.lineTo(23,15);
+ ctx.moveTo(28,3);ctx.lineTo(34,13);
+ ctx.stroke();
+
+ // Eyes
+ ctx.fillStyle="#132443";
+ ctx.beginPath();
+ ctx.ellipse(23,27,4,6,0,0,7);
+ ctx.ellipse(38,27,4,6,0,0,7);
+ ctx.fill();
+
+ ctx.fillStyle="white";
+ ctx.fillRect(22,24,2,3);
+ ctx.fillRect(37,24,2,3);
+
+ // Eyebrows
+ ctx.strokeStyle="#26314b";
+ ctx.lineWidth=2;
+ ctx.beginPath();
+ ctx.moveTo(19,19);ctx.lineTo(27,18);
+ ctx.moveTo(34,18);ctx.lineTo(42,19);
+ ctx.stroke();
+
+ // Mouth
+ ctx.strokeStyle="#b65e58";
+ ctx.beginPath();
+ ctx.arc(31,35,4,.2,2.8);
+ ctx.stroke();
+
+ ctx.restore();
+}
+
+// Golden coins
+function drawCoin(c){
+ ctx.save();
+ ctx.translate(c.x,c.y);
+ let w=12+Math.abs(Math.cos(frame*.1))*7;
+
+ ctx.shadowColor="#ffdf45";
+ ctx.shadowBlur=13;
+
+ let g=ctx.createRadialGradient(-4,-6,2,0,0,22);
+ g.addColorStop(0,"#fff9a5");
+ g.addColorStop(.5,"#ffcf25");
+ g.addColorStop(1,"#c47b00");
+
+ ctx.fillStyle=g;
+ ctx.beginPath();ctx.ellipse(0,0,w,20,0,0,7);ctx.fill();
+
+ ctx.shadowBlur=0;
+ ctx.strokeStyle="#fff5a1";
+ ctx.lineWidth=3;
+ ctx.stroke();
+
+ ctx.fillStyle="#a86a00";
+ ctx.font="bold 19px Arial";
+ ctx.textAlign="center";
+ ctx.fillText("$",0,7);
+ ctx.restore();
+}
+
+// Monster
+function drawEnemy(e){
+ ctx.save();
+ ctx.translate(e.x,e.y);
+
+ let bounce=Math.sin(frame*.2)*3;
+
+ // Body
+ ctx.fillStyle="#9c45b8";
+ ctx.beginPath();
+ ctx.ellipse(20,20+bounce,22,24,0,0,7);
+ ctx.fill();
+
+ // Horns
+ ctx.fillStyle="#f8dc81";
+ ctx.beginPath();
+ ctx.moveTo(5,5);ctx.lineTo(1,-10);
+ ctx.lineTo(15,1);
+ ctx.moveTo(33,5);ctx.lineTo(40,-10);
+ ctx.lineTo(27,2);
+ ctx.fill();
+
+ // Eyes
+ ctx.fillStyle="white";
+ ctx.beginPath();
+ ctx.arc(12,18+bounce,7,0,7);
+ ctx.arc(28,18+bounce,7,0,7);
+ ctx.fill();
+
+ ctx.fillStyle="#21142e";
+ ctx.beginPath();
+ ctx.arc(14,18+bounce,3,0,7);
+ ctx.arc(30,18+bounce,3,0,7);
+ ctx.fill();
+
+ // Mouth
+ ctx.strokeStyle="#47183f";
+ ctx.lineWidth=3;
+ ctx.beginPath();
+ ctx.arc(20,29+bounce,8,.2,2.9);
+ ctx.stroke();
+
+ // Feet
+ ctx.fillStyle="#642e87";
+ ctx.fillRect(5,38+bounce,10,8);
+ ctx.fillRect(25,38+bounce,10,8);
+
+ ctx.restore();
+}
+
+function spawn(){
+ if(frame%90<1){
+  let y=G-105-Math.random()*65;
+  for(let i=0;i<5;i++){
+   coins.push({x:W+60+i*40,y:y-Math.sin(i*.7)*18});
+  }
+ }
+ if(frame%135<1){
+  enemies.push({x:W+30,y:G-43,w:42,h:43,hit:false});
+ }
+}
+
+function jump(){
+ if(!gameOver&&!paused&&hero.ground){
+  hero.vy=-16.5;
+  hero.ground=false;
+ }
+}
+
+function hit(a,b){
+ return a.x<b.x+b.w &&
+ a.x+a.w>b.x &&
+ a.y<b.y+b.h &&
+ a.y+a.h>b.y;
+}
+
+function update(dt){
+ let s=dt/16.67;
+ frame+=s;
+ distance+=speed*s;
+ score+=Math.floor(speed*s/2);
+ speed=Math.min(10,speed+.0006*s);
+
+ hero.vy+=.76*s;
+ hero.y+=hero.vy*s;
+
+ if(hero.y+hero.h>=G){
+  hero.y=G-hero.h;
+  hero.vy=0;
+  hero.ground=true;
+ }
+
+ if(shield>0)shield-=s;
+
+ spawn();
+
+ coins.forEach(c=>{
+  c.x-=speed*s;
+  if(!c.taken&&hit(
+   {x:hero.x+5,y:hero.y+5,w:hero.w-10,h:hero.h-5},
+   {x:c.x-13,y:c.y-17,w:26,h:34}
+  )){
+   c.taken=true;
+   coinCount++;
+   score+=50;
+  }
+ });
+
+ coins=coins.filter(c=>c.x>-40&&!c.taken);
+
+ enemies.forEach(e=>{
+  e.x-=speed*s;
+
+  if(!e.hit&&shield<=0&&hit(
+   {x:hero.x+9,y:hero.y+12,w:hero.w-17,h:hero.h-15},
+   e
+  )){
+   e.hit=true;
+   life--;
+   shield=85;
+   if(life<=0)endGame();
+  }
+ });
+
+ enemies=enemies.filter(e=>e.x>-60);
+
+ updateInfo();
+}
+
+function draw(){
+ background();
+
+ coins.forEach(drawCoin);
+ enemies.forEach(drawEnemy);
+ drawHero();
+
+ if(paused&&!gameOver){
+  ctx.fillStyle="rgba(0,0,0,.55)";
   ctx.fillRect(0,0,W,H);
-
-  // Sun
-  ctx.fillStyle = "#fff47c";
-  ctx.beginPath();
-  ctx.arc(750,75,42,0,Math.PI*2);
-  ctx.fill();
-
-  // Clouds
-  for(let i=0;i<5;i++) {
-    let x = ((i*230-distance*.18) % 1100 + 1100) % 1100 - 100;
-    let y = 65 + (i%3)*38;
-
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.beginPath();
-    ctx.arc(x,y,23,0,Math.PI*2);
-    ctx.arc(x+25,y-12,29,0,Math.PI*2);
-    ctx.arc(x+55,y,22,0,Math.PI*2);
-    ctx.fill();
-  }
-
-  // Far mountains
-  ctx.fillStyle = "#8acb9b";
-  ctx.beginPath();
-  ctx.moveTo(0,290);
-
-  for(let x=0;x<=W;x+=100) {
-    ctx.lineTo(x,190+Math.sin(x*.02)*45);
-  }
-
-  ctx.lineTo(W,ground);
-  ctx.lineTo(0,ground);
-  ctx.fill();
-
-  // Trees
-  for(let i=0;i<9;i++) {
-    let x = ((i*130-distance*.45)%1100+1100)%1100-100;
-
-    ctx.fillStyle="#75472b";
-    ctx.fillRect(x+25,255,18,115);
-
-    ctx.fillStyle="#237c46";
-    ctx.beginPath();
-    ctx.arc(x+34,250,48,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle="#43a85c";
-    ctx.beginPath();
-    ctx.arc(x+10,230,28,0,Math.PI*2);
-    ctx.fill();
-  }
-
-  // Ground
-  ctx.fillStyle="#9a602e";
-  ctx.fillRect(0,ground,W,H-ground);
-
-  ctx.fillStyle="#4abf48";
-  ctx.fillRect(0,ground,W,17);
-
-  // Ground marks
-  ctx.fillStyle="#d5a05a";
-
-  for(let i=0;i<20;i++) {
-    let x=((i*80-distance)%1000+1000)%1000;
-    ctx.fillRect(x,ground+35,35,5);
-  }
-}
-
-// Anime boy character
-function drawHero() {
-  ctx.save();
-
-  let bob = player.onGround ? Math.sin(frame*.2)*3 : 0;
-
-  ctx.translate(player.x,player.y+bob);
-
-  // Invincibility flash
-  if(invincible>0 && Math.floor(frame/5)%2===0) {
-    ctx.globalAlpha=.45;
-  }
-
-  // Shadow
-  ctx.fillStyle="rgba(0,0,0,.2)";
-  ctx.beginPath();
-  ctx.ellipse(28,95,35,7,0,0,Math.PI*2);
-  ctx.fill();
-
-  // Legs
-  ctx.strokeStyle="#263b72";
-  ctx.lineWidth=13;
-  ctx.lineCap="round";
-
-  let run=Math.sin(frame*.3)*9;
-
-  ctx.beginPath();
-  ctx.moveTo(23,66);
-  ctx.lineTo(18+run,83);
-  ctx.lineTo(12+run,87);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(35,66);
-  ctx.lineTo(38-run,83);
-  ctx.lineTo(46-run,87);
-  ctx.stroke();
-
-  // Shoes
-  ctx.fillStyle="#20283d";
-  ctx.beginPath();
-  ctx.ellipse(12+run,88,12,6,0,0,Math.PI*2);
-  ctx.ellipse(46-run,88,12,6,0,0,Math.PI*2);
-  ctx.fill();
-
-  // Body
-  ctx.fillStyle="#f1f3fa";
-  ctx.beginPath();
-  ctx.roundRect(13,37,32,37,9);
-  ctx.fill();
-
-  // Jacket
-  ctx.fillStyle="#263b79";
-  ctx.fillRect(10,43,36,27);
-
-  // Shirt
   ctx.fillStyle="#fff";
-  ctx.fillRect(25,42,8,25);
-
-  // Scarf
-  ctx.fillStyle="#e74b4b";
-  ctx.beginPath();
-  ctx.moveTo(17,39);
-  ctx.lineTo(39,39);
-  ctx.lineTo(34,47);
-  ctx.lineTo(20,46);
-  ctx.fill();
-
-  // Arms
-  ctx.strokeStyle="#f4c49f";
-  ctx.lineWidth=9;
-
-  ctx.beginPath();
-  ctx.moveTo(13,48);
-  ctx.lineTo(5,63+run);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(44,48);
-  ctx.lineTo(51,60-run);
-  ctx.stroke();
-
-  // Neck
-  ctx.fillStyle="#f4c49f";
-  ctx.fillRect(24,29,13,12);
-
-  // Face
-  ctx.fillStyle="#ffd2ac";
-  ctx.beginPath();
-  ctx.ellipse(30,25,19,23,0,0,Math.PI*2);
-  ctx.fill();
-
-  // Hair back
-  ctx.fillStyle="#202638";
-  ctx.beginPath();
-  ctx.arc(29,17,23,Math.PI,Math.PI*2);
-  ctx.lineTo(48,38);
-  ctx.lineTo(41,31);
-  ctx.lineTo(36,42);
-  ctx.lineTo(30,32);
-  ctx.lineTo(20,40);
-  ctx.fill();
-
-  // Front hair spikes
-  ctx.fillStyle="#202638";
-  ctx.beginPath();
-  ctx.moveTo(11,18);
-  ctx.lineTo(12,1);
-  ctx.lineTo(23,9);
-  ctx.lineTo(26,-7);
-  ctx.lineTo(34,8);
-  ctx.lineTo(46,1);
-  ctx.lineTo(44,22);
-  ctx.lineTo(35,15);
-  ctx.lineTo(28,24);
-  ctx.lineTo(22,14);
-  ctx.fill();
-
-  // Eyes
-  ctx.fillStyle="#182b45";
-  ctx.beginPath();
-  ctx.ellipse(23,25,3,5,0,0,Math.PI*2);
-  ctx.ellipse(38,25,3,5,0,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle="white";
-  ctx.fillRect(22,23,2,2);
-  ctx.fillRect(37,23,2,2);
-
-  // Smile
-  ctx.strokeStyle="#a94c4c";
-  ctx.lineWidth=1.5;
-  ctx.beginPath();
-  ctx.arc(31,31,5,.2,2.8);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-// Coin
-function drawCoin(c) {
-  ctx.save();
-  ctx.translate(c.x,c.y);
-
-  let width= Math.max(5,Math.abs(Math.cos(frame*.09))*17);
-
-  ctx.fillStyle="#e89a12";
-  ctx.beginPath();
-  ctx.ellipse(0,0,width,19,0,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.strokeStyle="#fff37b";
-  ctx.lineWidth=3;
-  ctx.stroke();
-
-  ctx.fillStyle="#fff6b0";
-  ctx.font="bold 17px Arial";
   ctx.textAlign="center";
-  ctx.fillText("$",0,6);
+  ctx.font="bold 55px Arial";
+  ctx.fillText("PAUSED",W/2,225);
+ }
 
-  ctx.restore();
+ if(gameOver){
+  ctx.fillStyle="rgba(5,10,30,.8)";
+  ctx.fillRect(0,0,W,H);
+  ctx.textAlign="center";
+  ctx.fillStyle="#ffe35b";
+  ctx.font="bold 55px Arial";
+  ctx.fillText("GAME OVER",W/2,190);
+  ctx.fillStyle="white";
+  ctx.font="bold 26px Arial";
+  ctx.fillText("Score: "+score,W/2,245);
+  ctx.fillText("Coins: "+coinCount,W/2,285);
+ }
 }
 
-// Obstacle
-function drawObstacle(o) {
-  ctx.fillStyle="#80502f";
-  ctx.fillRect(o.x,o.y,o.w,o.h);
-
-  ctx.fillStyle="#b7773e";
-  ctx.fillRect(o.x+5,o.y+5,o.w-10,8);
-
-  ctx.fillStyle="#4a9b36";
-  ctx.beginPath();
-  ctx.arc(o.x+12,o.y,12,Math.PI,0);
-  ctx.arc(o.x+28,o.y-5,14,Math.PI,0);
-  ctx.fill();
+function endGame(){
+ gameOver=true;
+ $("restart").hidden=false;
 }
 
-function spawnItems() {
-  if(frame%95===0) {
-    let base=ground-105-Math.random()*70;
+function loop(t){
+ let dt=lastTime?Math.min(t-lastTime,40):16.67;
+ lastTime=t;
 
-    for(let i=0;i<5;i++) {
-      coins.push({
-        x:W+i*39,
-        y:base-Math.sin(i*.65)*20,
-        r:16,
-        taken:false
-      });
-    }
-  }
-
-  if(frame%145===0) {
-    obstacles.push({
-      x:W,
-      y:ground-35,
-      w:37,
-      h:35,
-      hit:false
-    });
-  }
+ if(!paused&&!gameOver)update(dt);
+ draw();
+ requestAnimationFrame(loop);
 }
 
-function jump() {
-  if(gameOver) return;
-
-  if(paused) return;
-
-  if(player.onGround) {
-    player.vy=-16;
-    player.onGround=false;
-  }
-}
-
-function collide(a,b) {
-  return a.x < b.x+b.w &&
-         a.x+a.w > b.x &&
-         a.y < b.y+b.h &&
-         a.y+a.h > b.y;
-}
-
-function update(dt) {
-  let step=dt/16.67;
-
-  frame+=step;
-  distance+=speed*step;
-  score+=Math.floor(speed*step/2);
-  speed=Math.min(10,speed+.0008*step);
-
-  player.vy+=.75*step;
-  player.y+=player.vy*step;
-
-  if(player.y+player.h>=ground) {
-    player.y=ground-player.h;
-    player.vy=0;
-    player.onGround=true;
-  }
-
-  if(invincible>0) invincible-=step;
-
-  spawnItems();
-
-  // Coins
-  coins.forEach(c=>{
-    c.x-=speed*step;
-
-    let box={
-      x:player.x,
-      y:player.y,
-      w:player.w,
-      h:player.h
-    };
-
-    if(!c.taken && collide(box,{
-      x:c.x-13,
-      y:c.y-15,
-      w:26,
-      h:30
-    })) {
-      c.taken=true;
-      coinCount++;
-      score+=50;
-    }
-  });
-
-  coins=coins.filter(c=>c.x>-50&&!c.taken);
-
-  // Obstacles
-  obstacles.forEach(o=>{
-    o.x-=speed*step;
-
-    let box={
-      x:player.x+8,
-      y:player.y+10,
-      w:player.w-15,
-      h:player.h-12
-    };
-
-    if(!o.hit && invincible<=0 && collide(box,o)) {
-      o.hit=true;
-      life--;
-      invincible=85;
-
-      if(life<=0) {
-        endGame();
-      }
-    }
-  });
-
-  obstacles=obstacles.filter(o=>o.x>-60);
-
-  updateInfo();
-}
-
-function draw() {
-  drawBackground();
-
-  coins.forEach(drawCoin);
-  obstacles.forEach(drawObstacle);
-
-  drawHero();
-
-  if(gameOver) {
-    ctx.fillStyle="rgba(8,15,30,.75)";
-    ctx.fillRect(0,0,W,H);
-
-    ctx.textAlign="center";
-    ctx.fillStyle="#ffe45c";
-    ctx.font="bold 55px Arial";
-    ctx.fillText("GAME OVER",W/2,190);
-
-    ctx.fillStyle="white";
-    ctx.font="bold 25px Arial";
-    ctx.fillText("Score: "+score,W/2,240);
-    ctx.fillText("Coins: "+coinCount,W/2,280);
-  }
-}
-
-function endGame() {
-  gameOver=true;
-  $("restart").hidden=false;
-}
-
-function loop(time) {
-  let dt=lastTime ? Math.min(time-lastTime,40) : 16.67;
-  lastTime=time;
-
-  if(!paused && !gameOver) {
-    update(dt);
-  }
-
-  draw();
-  requestAnimationFrame(loop);
-}
-
-$("jumpBtn").addEventListener("pointerdown",e=>{
-  e.preventDefault();
-  jump();
+$("jump").addEventListener("pointerdown",e=>{
+ e.preventDefault();jump();
 });
 
-$("pauseBtn").addEventListener("click",()=>{
-  if(gameOver) return;
-
-  paused=!paused;
-  $("pauseBtn").textContent=paused?"▶ PLAY":"⏸ PAUSE";
+$("pause").addEventListener("click",()=>{
+ if(gameOver)return;
+ paused=!paused;
+ $("pause").textContent=paused?"▶ PLAY":"⏸ PAUSE";
 });
 
-$("restart").addEventListener("click",()=>{
-  resetGame();
-});
+$("restart").addEventListener("click",reset);
 
 document.addEventListener("keydown",e=>{
-  if(e.code==="Space" || e.code==="ArrowUp") {
-    e.preventDefault();
-    jump();
-  }
+ if(e.code==="Space"||e.code==="ArrowUp"){
+  e.preventDefault();jump();
+ }
 });
 
-resetGame();
+reset();
 requestAnimationFrame(loop);
-
 </script>
 </body>
 </html>
