@@ -1,109 +1,609 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rahim Adventure</title>
+<title>Anime Boy - Coin Runner</title>
+
 <style>
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
-  background: #87ceeb;
+  padding: 0;
+}
+
+body {
+  background: #101b2b;
+  color: white;
+  font-family: Arial, sans-serif;
   text-align: center;
-  font-family: Arial;
+  overflow-x: hidden;
 }
-h2 { color: #164d25; }
-canvas {
-  background: #8ee65a;
-  width: 100%;
-  max-width: 800px;
-  border: 4px solid #286b24;
-}
-.controls button {
+
+h1 {
+  padding: 15px 5px;
+  color: #ffe45c;
   font-size: 25px;
-  padding: 15px 25px;
-  margin: 8px;
-  border-radius: 12px;
+  text-shadow: 2px 3px #583b19;
+}
+
+.game-box {
+  width: 100%;
+  max-width: 950px;
+  margin: auto;
+  padding: 8px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  border: 4px solid #f7d45c;
+  border-radius: 13px;
+  background: #87ceeb;
+  touch-action: none;
+}
+
+.info {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 4px;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 15px;
+}
+
+button {
   border: none;
-  background: #ffca28;
+  border-radius: 16px;
+  padding: 16px 30px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #172238;
+  background: #ffdb4d;
+  box-shadow: 0 5px #c18a21;
+  cursor: pointer;
+  touch-action: none;
+}
+
+button:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px #c18a21;
+}
+
+#restart {
+  background: #50e68c;
+  margin: 8px;
+}
+
+.tip {
+  color: #c8d7ef;
+  padding: 10px;
+  font-size: 13px;
 }
 </style>
 </head>
+
 <body>
 
-<h2>🌳 Rahim Adventure</h2>
-<h3 id="score">Score: 0</h3>
+<h1>⚔️ ANIME BOY: COIN RUNNER</h1>
 
-<canvas id="game" width="800" height="400"></canvas>
+<div class="game-box">
 
-<div class="controls">
-<button onclick="left()">⬅️</button>
-<button onclick="jump()">⬆️</button>
-<button onclick="right()">➡️</button>
+  <div class="info">
+    <span>🪙 Coins: <span id="coins">0</span></span>
+    <span>❤️ Life: <span id="life">3</span></span>
+    <span>🏆 Score: <span id="score">0</span></span>
+  </div>
+
+  <canvas id="game" width="900" height="450"></canvas>
+
+  <div class="controls">
+    <button id="jumpBtn">⬆ JUMP</button>
+    <button id="pauseBtn">⏸ PAUSE</button>
+  </div>
+
+  <button id="restart" hidden>🔄 PLAY AGAIN</button>
+
+  <p class="tip">
+    Tap JUMP to collect coins and avoid obstacles!
+  </p>
+
 </div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let player = {x:80, y:300, w:40, h:50, vy:0};
-let score = 0;
-let ground = 350;
+const W = 900;
+const H = 450;
+const ground = 365;
 
-function draw() {
-  ctx.clearRect(0,0,800,400);
+let player, coins, obstacles;
+let score, coinCount, life;
+let speed, distance, frame;
+let gameOver, paused, invincible;
+let lastTime = 0;
 
-  // Sky
-  ctx.fillStyle = "#87ceeb";
-  ctx.fillRect(0,0,800,400);
+const $ = id => document.getElementById(id);
+
+function resetGame() {
+  player = {
+    x: 145,
+    y: ground - 92,
+    w: 54,
+    h: 92,
+    vy: 0,
+    onGround: true
+  };
+
+  coins = [];
+  obstacles = [];
+
+  score = 0;
+  coinCount = 0;
+  life = 3;
+  speed = 5;
+  distance = 0;
+  frame = 0;
+
+  gameOver = false;
+  paused = false;
+  invincible = 0;
+
+  $("restart").hidden = true;
+  $("pauseBtn").textContent = "⏸ PAUSE";
+  updateInfo();
+}
+
+function updateInfo() {
+  $("coins").textContent = coinCount;
+  $("life").textContent = life;
+  $("score").textContent = score;
+}
+
+// Background
+function drawBackground() {
+  let sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,"#64c8fa");
+  sky.addColorStop(1,"#e4f9c9");
+
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H);
 
   // Sun
-  ctx.fillStyle = "yellow";
+  ctx.fillStyle = "#fff47c";
   ctx.beginPath();
-  ctx.arc(700,65,35,0,Math.PI*2);
+  ctx.arc(750,75,42,0,Math.PI*2);
   ctx.fill();
+
+  // Clouds
+  for(let i=0;i<5;i++) {
+    let x = ((i*230-distance*.18) % 1100 + 1100) % 1100 - 100;
+    let y = 65 + (i%3)*38;
+
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    ctx.beginPath();
+    ctx.arc(x,y,23,0,Math.PI*2);
+    ctx.arc(x+25,y-12,29,0,Math.PI*2);
+    ctx.arc(x+55,y,22,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // Far mountains
+  ctx.fillStyle = "#8acb9b";
+  ctx.beginPath();
+  ctx.moveTo(0,290);
+
+  for(let x=0;x<=W;x+=100) {
+    ctx.lineTo(x,190+Math.sin(x*.02)*45);
+  }
+
+  ctx.lineTo(W,ground);
+  ctx.lineTo(0,ground);
+  ctx.fill();
+
+  // Trees
+  for(let i=0;i<9;i++) {
+    let x = ((i*130-distance*.45)%1100+1100)%1100-100;
+
+    ctx.fillStyle="#75472b";
+    ctx.fillRect(x+25,255,18,115);
+
+    ctx.fillStyle="#237c46";
+    ctx.beginPath();
+    ctx.arc(x+34,250,48,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="#43a85c";
+    ctx.beginPath();
+    ctx.arc(x+10,230,28,0,Math.PI*2);
+    ctx.fill();
+  }
 
   // Ground
-  ctx.fillStyle = "#258c32";
-  ctx.fillRect(0,ground,800,50);
+  ctx.fillStyle="#9a602e";
+  ctx.fillRect(0,ground,W,H-ground);
 
-  // Coins
-  ctx.fillStyle = "gold";
+  ctx.fillStyle="#4abf48";
+  ctx.fillRect(0,ground,W,17);
+
+  // Ground marks
+  ctx.fillStyle="#d5a05a";
+
+  for(let i=0;i<20;i++) {
+    let x=((i*80-distance)%1000+1000)%1000;
+    ctx.fillRect(x,ground+35,35,5);
+  }
+}
+
+// Anime boy character
+function drawHero() {
+  ctx.save();
+
+  let bob = player.onGround ? Math.sin(frame*.2)*3 : 0;
+
+  ctx.translate(player.x,player.y+bob);
+
+  // Invincibility flash
+  if(invincible>0 && Math.floor(frame/5)%2===0) {
+    ctx.globalAlpha=.45;
+  }
+
+  // Shadow
+  ctx.fillStyle="rgba(0,0,0,.2)";
   ctx.beginPath();
-  ctx.arc(350,290,15,0,Math.PI*2);
+  ctx.ellipse(28,95,35,7,0,0,Math.PI*2);
   ctx.fill();
 
-  // Player
-  ctx.fillStyle = "#ff5722";
-  ctx.fillRect(player.x,player.y,player.w,player.h);
+  // Legs
+  ctx.strokeStyle="#263b72";
+  ctx.lineWidth=13;
+  ctx.lineCap="round";
 
-  ctx.fillStyle = "white";
-  ctx.fillRect(player.x+25,player.y+10,8,8);
+  let run=Math.sin(frame*.3)*9;
 
-  player.y += player.vy;
-  player.vy += 0.7;
+  ctx.beginPath();
+  ctx.moveTo(23,66);
+  ctx.lineTo(18+run,83);
+  ctx.lineTo(12+run,87);
+  ctx.stroke();
 
-  if(player.y+player.h >= ground) {
-    player.y = ground-player.h;
-    player.vy = 0;
+  ctx.beginPath();
+  ctx.moveTo(35,66);
+  ctx.lineTo(38-run,83);
+  ctx.lineTo(46-run,87);
+  ctx.stroke();
+
+  // Shoes
+  ctx.fillStyle="#20283d";
+  ctx.beginPath();
+  ctx.ellipse(12+run,88,12,6,0,0,Math.PI*2);
+  ctx.ellipse(46-run,88,12,6,0,0,Math.PI*2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle="#f1f3fa";
+  ctx.beginPath();
+  ctx.roundRect(13,37,32,37,9);
+  ctx.fill();
+
+  // Jacket
+  ctx.fillStyle="#263b79";
+  ctx.fillRect(10,43,36,27);
+
+  // Shirt
+  ctx.fillStyle="#fff";
+  ctx.fillRect(25,42,8,25);
+
+  // Scarf
+  ctx.fillStyle="#e74b4b";
+  ctx.beginPath();
+  ctx.moveTo(17,39);
+  ctx.lineTo(39,39);
+  ctx.lineTo(34,47);
+  ctx.lineTo(20,46);
+  ctx.fill();
+
+  // Arms
+  ctx.strokeStyle="#f4c49f";
+  ctx.lineWidth=9;
+
+  ctx.beginPath();
+  ctx.moveTo(13,48);
+  ctx.lineTo(5,63+run);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(44,48);
+  ctx.lineTo(51,60-run);
+  ctx.stroke();
+
+  // Neck
+  ctx.fillStyle="#f4c49f";
+  ctx.fillRect(24,29,13,12);
+
+  // Face
+  ctx.fillStyle="#ffd2ac";
+  ctx.beginPath();
+  ctx.ellipse(30,25,19,23,0,0,Math.PI*2);
+  ctx.fill();
+
+  // Hair back
+  ctx.fillStyle="#202638";
+  ctx.beginPath();
+  ctx.arc(29,17,23,Math.PI,Math.PI*2);
+  ctx.lineTo(48,38);
+  ctx.lineTo(41,31);
+  ctx.lineTo(36,42);
+  ctx.lineTo(30,32);
+  ctx.lineTo(20,40);
+  ctx.fill();
+
+  // Front hair spikes
+  ctx.fillStyle="#202638";
+  ctx.beginPath();
+  ctx.moveTo(11,18);
+  ctx.lineTo(12,1);
+  ctx.lineTo(23,9);
+  ctx.lineTo(26,-7);
+  ctx.lineTo(34,8);
+  ctx.lineTo(46,1);
+  ctx.lineTo(44,22);
+  ctx.lineTo(35,15);
+  ctx.lineTo(28,24);
+  ctx.lineTo(22,14);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle="#182b45";
+  ctx.beginPath();
+  ctx.ellipse(23,25,3,5,0,0,Math.PI*2);
+  ctx.ellipse(38,25,3,5,0,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="white";
+  ctx.fillRect(22,23,2,2);
+  ctx.fillRect(37,23,2,2);
+
+  // Smile
+  ctx.strokeStyle="#a94c4c";
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.arc(31,31,5,.2,2.8);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Coin
+function drawCoin(c) {
+  ctx.save();
+  ctx.translate(c.x,c.y);
+
+  let width= Math.max(5,Math.abs(Math.cos(frame*.09))*17);
+
+  ctx.fillStyle="#e89a12";
+  ctx.beginPath();
+  ctx.ellipse(0,0,width,19,0,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle="#fff37b";
+  ctx.lineWidth=3;
+  ctx.stroke();
+
+  ctx.fillStyle="#fff6b0";
+  ctx.font="bold 17px Arial";
+  ctx.textAlign="center";
+  ctx.fillText("$",0,6);
+
+  ctx.restore();
+}
+
+// Obstacle
+function drawObstacle(o) {
+  ctx.fillStyle="#80502f";
+  ctx.fillRect(o.x,o.y,o.w,o.h);
+
+  ctx.fillStyle="#b7773e";
+  ctx.fillRect(o.x+5,o.y+5,o.w-10,8);
+
+  ctx.fillStyle="#4a9b36";
+  ctx.beginPath();
+  ctx.arc(o.x+12,o.y,12,Math.PI,0);
+  ctx.arc(o.x+28,o.y-5,14,Math.PI,0);
+  ctx.fill();
+}
+
+function spawnItems() {
+  if(frame%95===0) {
+    let base=ground-105-Math.random()*70;
+
+    for(let i=0;i<5;i++) {
+      coins.push({
+        x:W+i*39,
+        y:base-Math.sin(i*.65)*20,
+        r:16,
+        taken:false
+      });
+    }
   }
 
-  requestAnimationFrame(draw);
+  if(frame%145===0) {
+    obstacles.push({
+      x:W,
+      y:ground-35,
+      w:37,
+      h:35,
+      hit:false
+    });
+  }
 }
 
-function left() {
-  player.x = Math.max(0,player.x-20);
-}
-function right() {
-  player.x = Math.min(760,player.x+20);
-}
 function jump() {
-  if(player.y+player.h >= ground) {
-    player.vy = -13;
+  if(gameOver) return;
+
+  if(paused) return;
+
+  if(player.onGround) {
+    player.vy=-16;
+    player.onGround=false;
   }
 }
 
-draw();
-</script>
+function collide(a,b) {
+  return a.x < b.x+b.w &&
+         a.x+a.w > b.x &&
+         a.y < b.y+b.h &&
+         a.y+a.h > b.y;
+}
 
+function update(dt) {
+  let step=dt/16.67;
+
+  frame+=step;
+  distance+=speed*step;
+  score+=Math.floor(speed*step/2);
+  speed=Math.min(10,speed+.0008*step);
+
+  player.vy+=.75*step;
+  player.y+=player.vy*step;
+
+  if(player.y+player.h>=ground) {
+    player.y=ground-player.h;
+    player.vy=0;
+    player.onGround=true;
+  }
+
+  if(invincible>0) invincible-=step;
+
+  spawnItems();
+
+  // Coins
+  coins.forEach(c=>{
+    c.x-=speed*step;
+
+    let box={
+      x:player.x,
+      y:player.y,
+      w:player.w,
+      h:player.h
+    };
+
+    if(!c.taken && collide(box,{
+      x:c.x-13,
+      y:c.y-15,
+      w:26,
+      h:30
+    })) {
+      c.taken=true;
+      coinCount++;
+      score+=50;
+    }
+  });
+
+  coins=coins.filter(c=>c.x>-50&&!c.taken);
+
+  // Obstacles
+  obstacles.forEach(o=>{
+    o.x-=speed*step;
+
+    let box={
+      x:player.x+8,
+      y:player.y+10,
+      w:player.w-15,
+      h:player.h-12
+    };
+
+    if(!o.hit && invincible<=0 && collide(box,o)) {
+      o.hit=true;
+      life--;
+      invincible=85;
+
+      if(life<=0) {
+        endGame();
+      }
+    }
+  });
+
+  obstacles=obstacles.filter(o=>o.x>-60);
+
+  updateInfo();
+}
+
+function draw() {
+  drawBackground();
+
+  coins.forEach(drawCoin);
+  obstacles.forEach(drawObstacle);
+
+  drawHero();
+
+  if(gameOver) {
+    ctx.fillStyle="rgba(8,15,30,.75)";
+    ctx.fillRect(0,0,W,H);
+
+    ctx.textAlign="center";
+    ctx.fillStyle="#ffe45c";
+    ctx.font="bold 55px Arial";
+    ctx.fillText("GAME OVER",W/2,190);
+
+    ctx.fillStyle="white";
+    ctx.font="bold 25px Arial";
+    ctx.fillText("Score: "+score,W/2,240);
+    ctx.fillText("Coins: "+coinCount,W/2,280);
+  }
+}
+
+function endGame() {
+  gameOver=true;
+  $("restart").hidden=false;
+}
+
+function loop(time) {
+  let dt=lastTime ? Math.min(time-lastTime,40) : 16.67;
+  lastTime=time;
+
+  if(!paused && !gameOver) {
+    update(dt);
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+$("jumpBtn").addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  jump();
+});
+
+$("pauseBtn").addEventListener("click",()=>{
+  if(gameOver) return;
+
+  paused=!paused;
+  $("pauseBtn").textContent=paused?"▶ PLAY":"⏸ PAUSE";
+});
+
+$("restart").addEventListener("click",()=>{
+  resetGame();
+});
+
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space" || e.code==="ArrowUp") {
+    e.preventDefault();
+    jump();
+  }
+});
+
+resetGame();
+requestAnimationFrame(loop);
+
+</script>
 </body>
 </html>
